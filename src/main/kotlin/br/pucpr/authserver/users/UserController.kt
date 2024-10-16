@@ -1,7 +1,8 @@
 package br.pucpr.authserver.users
 
-
 import br.pucpr.authserver.roles.RoleRepository
+import br.pucpr.authserver.users.requests.*
+import br.pucpr.authserver.users.responses.UserResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -12,16 +13,16 @@ import org.springframework.web.multipart.MultipartFile
 @RequestMapping("/users")
 class UserController(
     val service: UserService,  // Injeção de UserService
-    val roleRepository:RoleRepository
+    val roleRepository: RoleRepository
 ) {
 
     @PostMapping
     fun insert(@RequestBody @Valid userRequest: CreateUserRequest): ResponseEntity<Any> {
         return try {
-            // Busca o Role baseado no roleId fornecido no request
+            // Busca o Role baseado no role fornecido no request
             val role = roleRepository.findByName(userRequest.role)
                 ?: return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(mapOf("message" to "Role com ID ${userRequest.roleId} não encontrado."))
+                    .body(mapOf("message" to "Role com nome ${userRequest.role} não encontrado."))
 
             // Converte o CreateUserRequest para User, passando o Role
             val newUser = service.insert(userRequest)
@@ -31,8 +32,6 @@ class UserController(
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("message" to e.message))
         }
     }
-
-
 
     @GetMapping("/list")
     fun listUsers(): ResponseEntity<List<UserResponse>> {
@@ -60,14 +59,12 @@ class UserController(
             ?.let { ResponseEntity.ok(it) }
             ?: ResponseEntity.notFound().build()
 
-
     @PatchMapping("/{id}")
     fun update(@PathVariable id: Long, @RequestBody @Valid userRequest: CreateUserRequest): ResponseEntity<out Any> {
-        // Busca o Role baseado no roleId fornecido no request
-        val role = service.findRoleById(userRequest.role)
+        // Busca o Role baseado no nome fornecido no request
+        val role = roleRepository.findByName(userRequest.role)
             ?: return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(mapOf("message" to "Role com ID ${userRequest.roleId} não encontrado."))
-
+                .body(mapOf("message" to "Role com nome ${userRequest.role} não encontrado."))
 
         // Converte o CreateUserRequest para User, passando o Role
         val updatedUser = service.update(id, userRequest.toUser(role))
@@ -78,8 +75,6 @@ class UserController(
             ResponseEntity.notFound().build()
         }
     }
-
-
 
     @PostMapping("/{userId}/roles/{roleId}")
     fun addRoleToUser(
@@ -93,17 +88,13 @@ class UserController(
 
     @PostMapping("/login")
     fun login(
-        @RequestBody loginRequest: LoginRequest // Crie uma classe br.pucpr.authserver.users.LoginRequest para e-mail e senha
+        @RequestBody loginRequest: LoginRequest // Classe br.pucpr.authserver.users.requests.LoginRequest para e-mail e senha
     ): ResponseEntity<Any> {
         return try {
-            val user = service.findByEmailAndPassword(loginRequest.email, loginRequest.password)
-            if (user != null) {
-                ResponseEntity.ok(UserResponse(user)) // Usuário encontrado e login bem-sucedido
-            } else {
-                ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "Invalid email or password"))
-            }
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("message" to e.message))
+            val token = service.login(loginRequest.email, loginRequest.password)
+            ResponseEntity.ok(mapOf("token" to token)) // Retorna o token JWT na resposta
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "Invalid email or password"))
         }
     }
 
@@ -128,7 +119,7 @@ class UserController(
     fun getProfile(@RequestParam email: String): ResponseEntity<Any> {
         val user = service.findByEmail(email)
         return if (user != null) {
-            ResponseEntity.ok(user)
+            ResponseEntity.ok(UserResponse(user))
         } else {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("message" to "User not found"))
         }
@@ -136,7 +127,7 @@ class UserController(
 
     @PutMapping("/updateProfile")
     fun updateProfile(
-        @RequestParam("email",required=false) email: String,
+        @RequestParam("email", required = false) email: String,
         @RequestParam("name") name: String,
         @RequestParam("profilePic", required = false) profilePic: MultipartFile?
     ): ResponseEntity<Any> {
@@ -147,6 +138,7 @@ class UserController(
             ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("message" to "Failed to update profile"))
         }
     }
+
     @DeleteMapping("/{adminId}/{userId}")
     fun deleteUser(
         @PathVariable adminId: String,
@@ -158,7 +150,6 @@ class UserController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(mapOf("message" to "You do not have permission to delete users. Admin role required."))
         }
-
 
         // Obtenha o email do usuário com base no userId (presumindo que existe um método para isso)
         val userEmail = service.findEmailByUserId(userId) // Implemente este método
@@ -173,13 +164,10 @@ class UserController(
             .body(mapOf("message" to "User not found"))
     }
 
-
-
-
     @GetMapping("/all")
-    fun getAllUsers(): ResponseEntity<List<User>> {
+    fun getAllUsers(): ResponseEntity<List<UserResponse>> {
         val users = service.getAllUsers()
-        return ResponseEntity.ok(users)
+        return ResponseEntity.ok(users.map { UserResponse(it) })
     }
 
 }
