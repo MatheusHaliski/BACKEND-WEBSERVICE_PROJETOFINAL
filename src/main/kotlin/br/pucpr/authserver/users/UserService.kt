@@ -4,6 +4,7 @@ import br.pucpr.authserver.mensagens.MensagensGRepository
 import br.pucpr.authserver.users.errors.NotFoundException
 import br.pucpr.authserver.roles.Role
 import br.pucpr.authserver.roles.RoleRepository
+import br.pucpr.authserver.security.Jwt // Certifique-se de ter a classe Jwt importada
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -16,17 +17,29 @@ import java.nio.file.StandardCopyOption
 class UserService(
     private val repository: UserRepository,
     private val roleRepository: RoleRepository,
-    private val mensagensGRepository:MensagensGRepository
+    private val mensagensGRepository:MensagensGRepository,
+    private val jwt: Jwt // Adicione o JWT ao construtor
 ) {
-    fun isUserNameTaken(name: String): Boolean {
-        return repository.findByName(name) != null
+    // Verifica o token antes de executar a lógica
+    private fun verifyToken(token: String) {
+        if (!jwt.validateToken(token)) {
+            throw IllegalArgumentException("Token inválido ou expirado!")
+        }
     }
-    fun isUserEmailTaken(name: String): Boolean {
-        return repository.findByEmail(name) != null
+
+    fun login(email: String, password: String): LoginResponse? {
+        val user = repository.findByEmailAndPassword(email, password)
+            ?: throw NotFoundException("Usuário ou senha incorretos!")
+
+        // Gere o token JWT
+        val token = jwt.createToken(user)
+
+        return LoginResponse(
+            token = token,
+            user = UserResponse(user)
+        )
     }
-    fun findByEmailAndPassword(email: String, password: String): User? {
-        return repository.findByEmailAndPassword(email, password) // Corrigido para retornar um User
-    }
+
     fun insert(userRequest: CreateUserRequest): User {
         val role = roleRepository.findByName(userRequest.role)
             .orElseThrow { IllegalArgumentException("Role com ID ${userRequest.roleId} não encontrado.") }
@@ -42,19 +55,23 @@ class UserService(
 
         return repository.save(user)
     }
-    fun findRoleById(roleId: String): Role? {
-        return roleRepository.findByName(roleId).orElse(null)
-    }
 
-    fun list(sortDir: SortDir): List<User> =
-        if (sortDir == SortDir.ASC)
+    // Exemplo de verificação de token para listar usuários
+    fun list(sortDir: SortDir, token: String): List<User> {
+        verifyToken(token)
+        return if (sortDir == SortDir.ASC)
             repository.findAll()
         else
             repository.findAll().reversed()
+    }
 
-    fun findByIdOrNull(id: Long): User? = repository.findById(id).orElse(null)
+    fun findByIdOrNull(id: Long, token: String): User? {
+        verifyToken(token)
+        return repository.findById(id).orElse(null)
+    }
 
-    fun update(id: Long, user: User): User {
+    fun update(id: Long, user: User, token: String): User {
+        verifyToken(token)
         val existingUser: User = repository.findById(id).orElse(null)
             ?: throw NotFoundException("Usuário com ID $id não encontrado!")
 
@@ -65,20 +82,9 @@ class UserService(
         return repository.save(existingUser)
     }
 
-    fun updateEmail(userId: Long, newEmail: String): User {
-        val user: User = repository.findById(userId).orElseThrow {
-            NotFoundException("Usuário com ID $userId não encontrado!")
-        }
+    fun delete(adminId: Long, userId: Long, token: String) {
+        verifyToken(token)
 
-        if (repository.findByEmail(newEmail) != null) {
-            throw IllegalArgumentException("O e-mail '$newEmail' já está em uso.")
-        }
-
-        user.email = newEmail
-        return repository.save(user)
-    }
-
-    fun delete(adminId: Long, userId: Long) {
         val admin: User = repository.findById(adminId).orElseThrow {
             NotFoundException("Administrador com ID $adminId não encontrado!")
         }
@@ -94,69 +100,6 @@ class UserService(
         repository.deleteById(userId)
     }
 
-    fun addRoleToUser(userId: Long, roleId: Long): User? {
-        val user: User = repository.findById(userId).orElseThrow {
-            NotFoundException("Usuário com ID $userId não encontrado!")
-        }
 
-        val role: Role = roleRepository.findById(roleId).orElseThrow {
-            NotFoundException("Role com ID $roleId não encontrado!")
-        }
 
-        if (!user.roles.contains(role)) {
-            user.roles.add(role)
-            return repository.save(user)
-        } else {
-            throw IllegalArgumentException("Usuário já possui este Role!")
-        }
-    }
-    fun findByEmail(email: String): User? {
-        return repository.findByEmail(email)
-    }
-    fun updatePassword(user: User, newPassword: String): Boolean {
-        user.password = newPassword
-        repository.save(user)
-        return true
-    }
-    @Transactional
-    fun updateProfile(email: String, name: String?, profilePic: MultipartFile?): Boolean {
-        val user = repository.findByEmail(email) ?: return false
-
-        user.name = name ?: user.name
-
-        if (profilePic != null) {
-            val fileName = "${profilePic.originalFilename}"
-            val filePath = Paths.get("src/main/resources/static/uploads", fileName)
-            profilePic.inputStream.use { input ->
-                Files.copy(input, filePath, StandardCopyOption.REPLACE_EXISTING)
-            }
-            user.profilePic = fileName // Save only the file name or URL
-        }
-
-        repository.save(user)
-        return true
-    }
-    fun getAllUsers(): List<User> {
-        val users = repository.findAll()
-        println("Fetched users: $users")
-        return users
-    }
-
-    fun delete(userId: Long): Boolean {
-        val user = repository.findByIdOrNull(userId) ?: return false
-        repository.delete(user)
-        return true
-    }
-
-    fun deleteMessagesByUserId(userEmail: String): Boolean {
-        // Assumindo que você tem um repositório para MensagensG
-        return mensagensGRepository.deleteByUserId(userEmail) > 0 // Retorna verdadeiro se pelo menos uma mensagem foi deletada
-    }
-
-    fun findEmailByUserId(userId: Long): String? {
-        // Busca o usuário pelo ID
-        val user = repository.findByIdOrNull(userId)
-            return user?.email
-    }
 }
-
