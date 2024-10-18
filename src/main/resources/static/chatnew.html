@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil e Chat</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    body {
+       font-family: Arial, sans-serif;
+       background-color: #f0f0f0;
+       margin: 0;
+       padding: 0;
+       display: flex;
+   }
+   #sidebar {
+       width: 250px;
+       background-color: #fff;
+       padding: 20px;
+       box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+       height: 100vh;
+       overflow-y: auto;
+       position: fixed;
+   }
+   #content {
+       margin-left: 250px;
+       padding: 20px;
+       width: calc(100% - 270px);
+   }
+   #profile {
+       text-align: center;
+       margin-top: 20px;
+       width: 100%;
+       max-width: 600px;
+       background-color: #fff;
+       padding: 20px;
+       box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+       margin: 0 auto;
+   }
+   #recentConversations {
+       width: 250px;
+       position: fixed;
+       right: 20px;
+       top: 20px;
+       background-color: #fff;
+       padding: 10px;
+       box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+       max-height: 400px;
+       overflow-y: auto;
+   }
+   #recentConversations h3 {
+       margin-top: 0;
+       text-align: center;
+   }
+   .conversation {
+       padding: 10px;
+       border-radius: 5px;
+       margin: 5px 0;
+       background-color: #e7f3fe;
+       cursor: pointer;
+       transition: background-color 0.3s;
+   }
+   .conversation:hover {
+       background-color: #b8e1ff;
+   }
+   button {
+       padding: 10px 20px;
+       border-radius: 5px;
+       background-color: #1da1f2;
+       color: white;
+       border: none;
+       cursor: pointer;
+       display: block;
+       margin: 10px auto;
+   }
+   /* Modal Styles */
+   .modal {
+       display: none;
+       position: fixed;
+       z-index: 1;
+       left: 0;
+       top: 0;
+       width: 100%;
+       height: 100%;
+       overflow: auto;
+       background-color: rgba(0,0,0,0.4);
+       padding-top: 60px;
+   }
+   .modal-content {
+       background-color: #fefefe;
+       margin: 5% auto;
+       padding: 20px;
+       border: 1px solid #888;
+       width: 80%;
+       max-width: 500px;
+   }
+   .close {
+       color: #aaa;
+       float: right;
+       font-size: 28px;
+       font-weight: bold;
+   }
+   .close:hover,
+   .close:focus {
+       color: black;
+       text-decoration: none;
+       cursor: pointer;
+   }
+   /* Message feed styles */
+   .message-feed {
+       max-height: 300px;
+       overflow-y: auto;
+       margin-bottom: 10px;
+       padding: 10px;
+       border: 1px solid #ddd;
+       border-radius: 5px;
+       background-color: #f9f9f9;
+   }
+   .message {
+       padding: 5px;
+       margin: 5px 0;
+       border-radius: 5px;
+   }
+   .message.sent {
+     background-color: #f2d3b2; /* Cor de pele para mensagens enviadas */
+    text-align: right; /* Alinha o texto à direita */
+}
+
+.message.received {
+    background-color: #cce5ff; /* Cor de fundo azul claro para mensagens recebidas */
+    text-align: left; /* Alinha o texto à esquerda */
+}
+
+   #messageInput {
+       width: 100%;
+       padding: 10px;
+       border: 1px solid #ddd;
+       border-radius: 5px;
+   }
+    .profile-pic {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%; /* Make it circular */
+    margin-right: 8px; /* Space between image and text */
+    vertical-align: middle; /* Align with text */
+}
+
+
+.message {
+    display: flex; /* Usa flexbox para alinhar os itens */
+    align-items: center; /* Alinha verticalmente no centro */
+    justify-content: center; /* Centraliza os itens horizontalmente */
+    margin: 10px 0; /* Adiciona um espaço vertical entre as mensagens */
+    padding: 10px; /* Adiciona um preenchimento interno */
+    background: #f1f1f1; /* Cor de fundo da mensagem */
+    border-radius: 5px; /* Borda arredondada */
+    text-align: center; /* Alinhamento de texto ao centro */
+}
+
+.message-header {
+    display: flex; /* Alinha a foto e o nome do usuário em linha */
+    align-items: center; /* Alinha verticalmente ao centro */
+    justify-content: center; /* Centraliza os itens */
+    margin-bottom: 5px; /* Adiciona espaçamento abaixo do cabeçalho da mensagem */
+}
+
+.message-content {
+    flex-grow: 1; /* Faz com que o conteúdo da mensagem ocupe o espaço restante */
+    max-width: 70%; /* Limita a largura do conteúdo da mensagem */
+    word-wrap: break-word; /* Quebra palavras longas */
+}
+
+.profile-pic {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%; /* Torna circular */
+    margin-right: 8px; /* Espaço entre imagem e texto */
+    vertical-align: middle; /* Alinha com o texto */
+}
+
+.delete-button {
+    background: none; /* Remove o fundo do botão */
+    border: none; /* Remove a borda do botão */
+    cursor: pointer; /* Muda o cursor para indicar que é clicável */
+    padding: 0; /* Remove o preenchimento do botão */
+    margin-left: 10px; /* Adiciona um pouco de margem à esquerda para separação */
+    margin-right:20px;
+    width:30px;
+}
+
+.delete-button i {
+    font-size: 0.8em; /* Ajusta o tamanho do ícone */
+    color: red; /* Altera a cor do ícone para vermelho (opcional) */
+}
+.fas{
+    width:20px;  }
+  </style>
+</head>
+<body>
+<div id="sidebar">
+  <h2>Users</h2>
+  <button onclick="window.location.href='user-list.html'">Users List</button>
+</div>
+
+<div id="content">
+  <div id="profile">
+    <div id="welcomeMessage" class="welcome"></div>
+    <h2>Perfil</h2>
+    <img id="ProfilePic" src="/uploads/default.png" alt="Profile Picture" />
+    <h3 id="profileName">User Name</h3>
+    <input type="file" id="uploadProfilePic" accept="image/*" /><br>
+    <input type="text" id="userNameInput" placeholder="Digite seu nome" />
+    <button onclick="updateProfile()">Atualizar Perfil</button>
+    <button onclick="openModal()">Iniciar Conversa...</button>
+    <button onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div id="recentConversations">
+  <h3>Conversas Recentes</h3>
+  <div id="conversationList"></div>
+</div>
+
+<!-- Modal for chat -->
+<div id="chatModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeChatModal()">&times;</span>
+    <h2 id="chatUserName">Conversando com</h2>
+    <div id="messageFeed" class="message-feed"></div>
+    <input type="text" id="messageInput" placeholder="Digite sua mensagem aqui..." />
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2 id="modalUserName"></h2>
+    <div class="message-list" id="userListForConversation"></div>
+  </div>
+</div>
+
+<script>
+  let userEmail = localStorage.getItem('userEmail');
+  let loggedUserEmail = userEmail;
+  let currentChatUserEmail = '';
+  const authToken = localStorage.getItem('authToken'); // Pega o token de autenticação do localStorage
+
+  function fetchProfile() {
+    if (!userEmail) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    fetch(`/users/profile?email=${userEmail}`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const userName = data.name || 'User Name';
+      document.getElementById('profileName').textContent = userName;
+      document.getElementById('ProfilePic').src = `/uploads/${data.profilePic}` || '/uploads/default.png';
+    })
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Falha ao buscar perfil',
+        text: 'Erro ao buscar perfil: ' + error.message
+      });
+    });
+  }
+
+  function updateProfile() {
+    const newName = document.getElementById('userNameInput').value;
+    const profilePicInput = document.getElementById('uploadProfilePic');
+    const profilePicFile = profilePicInput.files[0];
+
+    if (!userEmail || !newName) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Dados Incompletos',
+        text: 'Por favor, forneça todas as informações necessárias.'
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('email', userEmail);
+    formData.append('name', newName);
+    if (profilePicFile) {
+      formData.append('profilePic', profilePicFile);
+    }
+
+    fetch('/users/updateProfile', {
+      method: 'PUT',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.message || 'Falha ao atualizar o perfil');
+        });
+      }
+      Swal.fire({
+        icon: 'success',
+        title: 'Perfil Atualizado',
+        text: 'Seu perfil foi atualizado com sucesso.'
+      });
+      fetchProfile();
+    })
+    .catch(error => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Falha ao atualizar o perfil',
+        text: 'Erro: ' + error.message
+      });
+    });
+  }
+
+  function loadUsers() {
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    if (welcomeMessage) {
+      welcomeMessage.innerText = `Bem-vindo, ${userEmail}!`;
+    }
+
+    fetch('/users/all', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
+    .then(response => response.json())
+    .then(users => {
+      const conversationList = document.getElementById('conversationList');
+      conversationList.innerHTML = ''; // Clear previous list
+
+      users.forEach(user => {
+        if (user.email !== userEmail) {
+          const userItem = document.createElement('div');
+          userItem.classList.add('conversation');
+          userItem.onclick = () => openChat(user.email);
+
+          const userImage = document.createElement('img');
+          userImage.src = `/uploads/${user.profilePic}`;
+          userImage.className = 'profile-pic';
+
+          const userName = document.createElement('span');
+          userName.innerText = user.name || user.email;
+
+          userItem.appendChild(userImage);
+          userItem.appendChild(userName);
+          conversationList.appendChild(userItem);
+        }
+      });
+    })
+    .catch(error => {
+      console.error('Erro ao carregar os usuários:', error);
+    });
+  }
+
+  function openChat(emailDestinatario) {
+    currentChatUserEmail = emailDestinatario;
+    document.getElementById('chatUserName').innerText = `Conversando com: ${currentChatUserEmail}`;
+    document.getElementById('messageFeed').innerHTML = '';
+    loadMessages(emailDestinatario);
+    document.getElementById('chatModal').style.display = 'block';
+  }
+
+  async function getUserProfilePic() {
+    try {
+      const response = await fetch(`/users/profile?email=${userEmail}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch your profile');
+      }
+      const data = await response.json();
+      return `/uploads/${data.profilePic}` || '/uploads/default.png';
+    } catch (error) {
+      console.error('Error fetching user profile picture:', error);
+      return '/uploads/default.png';
+    }
+  }
+
+  async function getRecipientProfilePic() {
+    try {
+      const response = await fetch(`/users/profile?email=${currentChatUserEmail}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch recipient profile');
+      }
+      const data = await response.json();
+      return `/uploads/${data.profilePic}` || '/uploads/default.png';
+    } catch (error) {
+      console.error('Error fetching recipient profile picture:', error);
+      return '/uploads/default.png';
+    }
+  }
+
+  async function loadMessages(emailDestinatario) {
+    const messageFeed = document.getElementById('messageFeed');
+    messageFeed.innerHTML = '';
+
+    const response = await fetch(`/mensagens/listarmt/${loggedUserEmail}/${emailDestinatario}`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    const messages = await response.json();
+
+    for (const message of messages) {
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message', message.emailUser === loggedUserEmail ? 'sent' : 'received');
+
+      const userName = document.createElement('span');
+      userName.textContent = message.emailUser === loggedUserEmail ? 'Você' : emailDestinatario;
+      userName.style.fontWeight = 'bold';
+
+      const profilePic = document.createElement('img');
+      profilePic.src = await (message.emailUser === loggedUserEmail ? getUserProfilePic() : getRecipientProfilePic());
+      profilePic.alt = 'Profile Picture';
+      profilePic.classList.add('profile-pic');
+
+      const messageContent = document.createElement('span');
+      messageContent.textContent = message.messageContent;
+
+      if (message.emailUser === loggedUserEmail) {
+        const deleteButton = document.createElement('button');
+        deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteButton.classList.add('delete-button');
+        deleteButton.onclick = () => deletarMensagem(message.id);
+        messageElement.appendChild(deleteButton);
+      }
+
+      messageElement.appendChild(profilePic);
+      messageElement.appendChild(userName);
+      messageElement.appendChild(messageContent);
+      messageFeed.appendChild(messageElement);
+    }
+  }
+
+  async function deletarMensagem(messageId) {
+    try {
+      const response = await fetch(`/mensagens/deletar/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const messageElement = document.querySelector(`.message[data-id='${messageId}']`);
+        if (messageElement) {
+          messageElement.remove();
+        }
+        location.reload();
+      } else {
+        console.error('Erro ao deletar mensagem:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Erro ao deletar mensagem:', error);
+    }
+  }
+
+  function sendMessage() {
+    const messageContent = document.getElementById('messageInput').value;
+    if (!messageContent.trim()) {
+      Swal.fire('Erro!', 'Você precisa digitar uma mensagem!', 'error');
+      return;
+    }
+
+    const mensagemDto = {
+      emailUser: loggedUserEmail,
+      emailDestinatario: currentChatUserEmail,
+      messageContent: messageContent
+    };
+
+    fetch('/mensagens/criarmt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify(mensagemDto)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Erro ao enviar a mensagem');
+      }
+      return response.json();
+    })
+    .then(() => {
+      document.getElementById('messageInput').value = '';
+      loadMessages(currentChatUserEmail);
+    })
+    .catch(error => {
+      Swal.fire('Erro!', error.message, 'error');
+    });
+  }
+
+  function openModal() {
+    document.getElementById('modal').style.display = "block";
+    fetchUserListForConversation();
+  }
+
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+
+  function fetchUserListForConversation() {
+    fetch('/users/all', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const userListForConversation = document.getElementById('userListForConversation');
+      userListForConversation.innerHTML = '';
+
+      data.forEach(user => {
+        if (user.email !== loggedUserEmail) {
+          const userElement = document.createElement('div');
+          userElement.classList.add('user');
+
+          const userProfilePic = document.createElement('img');
+          userProfilePic.src = `/uploads/${user.profilePic}`;
+          userProfilePic.alt = 'Profile Pic';
+
+          const userName = document.createElement('span');
+          userName.textContent = user.name || user.email;
+
+          userElement.onclick = () => openChat(user.email);
+
+          userElement.appendChild(userProfilePic);
+          userElement.appendChild(userName);
+          userListForConversation.appendChild(userElement);
+        }
+      });
+    });
+  }
+ function closeChatModal() {
+      document.getElementById('chatModal').style.display = 'none'; // Hide chat modal
+  }
+
+  function logout() {
+      localStorage.removeItem('userEmail');
+      window.location.href = 'loginnow.html';
+  }
+  window.onload = function () {
+    fetchProfile();
+    loadUsers();
+  };
+</script>
+
+</body>
+</html>

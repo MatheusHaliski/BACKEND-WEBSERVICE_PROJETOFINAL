@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+        }
+        #sidebar {
+            width: 250px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            height: 100vh;
+            overflow-y: auto;
+            position: fixed;
+        }
+        #sidebar h2 {
+            margin-top: 0;
+        }
+        #sidebar button {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #1da1f2;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #content {
+            margin-left: 250px;
+            padding: 20px;
+            width: calc(100% - 270px);
+        }
+        #profile {
+            text-align: center;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+        }
+        #profile img {
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+        }
+        #profile h3 {
+            margin: 10px 0;
+        }
+        #profile input {
+            margin: 5px 0;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            background-color: #1da1f2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: block;
+            margin: 10px auto;
+        }
+        #messageContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        #messageBox {
+            background: white;
+            width: 400px;
+            max-height: 80%;
+            overflow-y: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+        .message {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .message img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .message-content {
+            background-color: #e1ffc7;
+            border-radius: 5px;
+            padding: 10px;
+            max-width: 70%;
+        }
+    </style>
+</head>
+<body>
+<div id="sidebar">
+    <h2>Users</h2>
+    <button onclick="window.location.href='user-list.html'"> Users List </button>
+</div>
+
+<div id="content">
+    <h2 id="welcomeMessage" style="text-align: center;"></h2> <!-- Welcome Message -->
+    <div id="profile">
+        <h2>Profile</h2>
+        <img id="ProfilePic" src="" alt="Profile Picture"/>
+        <h3 id="profileName">User Name</h3>
+        <input type="file" id="uploadProfilePic" accept="image/*" /><br>
+        <input type="text" id="userNameInput" placeholder="Enter your name" />
+        <button onclick="updateProfile()">Update Profile</button>
+        <button id="publish">Publicar Mensagem no grupo</button>
+        <button id="viewFeed">Visualizar Mensagens do grupo</button>
+        <button onclick="irparachat()" id="viewFeed2">Iniciar conversa com alguém...</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<div id="messageContainer">
+    <div id="messageBox">
+        <div id="messageList"></div>
+        <button onclick="closeMessages()">Fechar</button>
+    </div>
+</div>
+
+<script>
+    var userEmail = localStorage.getItem('userEmail');
+    var authToken = localStorage.getItem('authToken'); // Pegando o token de autenticação do localStorage
+
+    function fetchProfile() {
+        if (!userEmail) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        fetch(`/users/profile?email=${userEmail}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}` // Adicionando o token no header
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const userName = data.name || 'User Name';
+            document.getElementById('profileName').textContent = userName;
+            document.getElementById('ProfilePic').src = `/uploads/${data.profilePic}` || '/uploads/default.png';
+            document.getElementById('welcomeMessage').textContent = `Welcome, ${userName}!`;
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed to fetch profile',
+                text: 'Error fetching profile: ' + error.message
+            });
+        });
+    }
+
+    function updateProfile() {
+        var newName = document.getElementById('userNameInput').value;
+        var profilePicInput = document.getElementById('uploadProfilePic');
+        var profilePicFile = profilePicInput.files[0];
+
+        if (!userEmail || !newName) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Incomplete Data',
+                text: 'Please provide all required information.'
+            });
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('email', userEmail);
+        formData.append('name', newName);
+        if (profilePicFile) {
+            formData.append('profilePic', profilePicFile);
+        }
+
+        fetch('/users/updateProfile', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}` // Adicionando o token no header
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Failed to update profile');
+                });
+            }
+            Swal.fire({
+                icon: 'success',
+                title: 'Profile Updated',
+                text: 'Your profile has been updated successfully.'
+            });
+            fetchProfile();
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed to update profile',
+                text: 'Error: ' + error.message
+            });
+        });
+    }
+
+    async function publishMessage() {
+        const { value: messageContent } = await Swal.fire({
+            title: 'Publicar Mensagem',
+            input: 'textarea',
+            inputLabel: 'Mensagem',
+            inputPlaceholder: 'Escreva sua mensagem aqui...',
+            showCancelButton: true,
+            confirmButtonText: 'Publicar',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Por favor, insira uma mensagem.';
+                }
+            }
+        });
+
+        if (messageContent) {
+            const novaMensagem = { emailUser: userEmail, messageContent };
+            const response = await fetch('/mensagensG/criarm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}` // Adicionando o token no header
+                },
+                body: JSON.stringify(novaMensagem)
+            });
+
+            if (response.ok) {
+                Swal.fire('Sucesso', 'Mensagem publicada com sucesso!', 'success');
+                fetchMessages(); // Fetch messages after publishing
+            } else {
+                const errorData = await response.json();
+                Swal.fire('Erro', errorData.message || 'Não foi possível publicar a mensagem.', 'error');
+            }
+        }
+    }
+
+    async function fetchMessages() {
+    const response = await fetch('/mensagensG/listarm', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${authToken}` // Adicionando o token no header
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        Swal.fire('Erro', errorData.message || 'Não foi possível carregar as mensagens.', 'error');
+        return;
+    }
+
+    const messages = await response.json();
+    const messageList = document.getElementById('messageList');
+    messageList.innerHTML = '';
+
+    for (const msg of messages) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message');
+
+        const emailUser = msg.emailUser;
+        console.log(`Carregando imagem para o email: ${emailUser}`);
+
+        // Obtém a URL da imagem de perfil
+        const profilePicUrl = await getUserProfilePicByEmail(emailUser);
+        console.log(`URL retornada para o email ${emailUser}: ${profilePicUrl}`);
+
+        const userPic = document.createElement('img');
+        userPic.src = profilePicUrl;
+
+        // Adicionar eventos de depuração ao carregar ou falhar o carregamento da imagem
+        userPic.onload = () => {
+            console.log(`Imagem carregada com sucesso para ${emailUser}`);
+        };
+        userPic.onerror = () => {
+            console.error(`Erro ao carregar a imagem para ${emailUser}. Usando imagem padrão.`);
+            userPic.src = '/uploads/default.png';
+        };
+
+        const messageContentElement = document.createElement('div');
+        messageContentElement.classList.add('message-content');
+        messageContentElement.textContent = msg.messageContent;
+
+        messageElement.appendChild(userPic);
+        messageElement.appendChild(messageContentElement);
+        messageList.appendChild(messageElement);
+    }
+
+    document.getElementById('messageContainer').style.display = 'flex';
+}
+
+    async function getUserProfilePicByEmail(emailUser) {
+        try {
+            const response = await fetch(`/users/profile?email=${emailUser}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}` // Adicionando o token no header
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch user profile');
+            }
+
+            const data = await response.json();
+            return `/uploads/${data.profilePic}` || '/uploads/default.png';
+        } catch (error) {
+            console.error('Error fetching user profile picture:', error);
+            return '/uploads/default.png';
+        }
+    }
+function logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userEmail');
+    window.location.href = 'loginnow.html'; // Redireciona para a página de login
+}
+function closeMessages(){
+ document.getElementById('messageContainer').style.display = 'none';
+ }
+    document.getElementById('publish').onclick = publishMessage;
+    document.getElementById('viewFeed').onclick = fetchMessages;
+ function irparachat() {
+        window.location.href = 'chatnew.html';
+    }
+    fetchProfile();
+</script>
+
+</body>
+</html>

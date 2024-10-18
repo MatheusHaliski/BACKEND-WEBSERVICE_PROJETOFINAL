@@ -1,0 +1,216 @@
+<!-- Login Page (loginnow.html) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 50px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #1da1f2;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bf2;
+        }
+        .links {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .links button {
+            background-color: #0d8bf2;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .links button:hover {
+            background-color: #0a6ebf;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Login</h1>
+    <form id="loginForm">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div class="links">
+        <button onclick="window.location.href='register.html'">Create an Account</button>
+
+        <button id="forgotPasswordBtn">Forgot your password?</button>
+    </div>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        var email = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+
+        var formData = {
+            email: email,
+            password: password
+        };
+
+         fetch('/users/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Invalid credentials');
+                });
+            }
+            return response.json(); // Aqui o objeto 'data' contém informações do usuário
+        })
+      .then(data => {
+    console.log(data); // Veja o que está sendo retornado
+console.log(data.user.email);
+    const token = data.token; // Supondo que o token JWT seja retornado no campo 'token'
+    const userRoles = data.user.roles || []; // Define um array vazio como valor padrão
+
+    // Salvar o token no localStorage
+    localStorage.setItem('authToken', token);
+
+    let message = 'Logado como COMUM';
+    if (userRoles.some(r => r.name === 'ADMIN')) {
+        message = 'Logado como ADMIN';
+    }
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Login Successful',
+        text: message // Exibe a mensagem de acordo com o papel do usuário
+    }).then(() => {
+        localStorage.setItem('userEmail', data.user.email); // Armazena o email do usuário
+
+        // Redireciona para a página de perfil após o login bem-sucedido
+        window.location.href = 'profile.html';
+    });
+
+    document.getElementById('loginForm').reset();
+})
+
+        .catch(error => {
+    Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: error.message || 'Não foi encontrado um usuário'
+    });
+});
+
+    });
+
+    document.getElementById('forgotPasswordBtn').addEventListener('click', function() {
+        Swal.fire({
+            title: 'Reset Password',
+            html: `
+                <label for="email">Email</label>
+                <input type="email" id="email" class="swal2-input" placeholder="Your Email">
+                <label for="newPassword">New Password</label>
+                <input type="password" id="newPassword" class="swal2-input" placeholder="New Password">
+            `,
+            confirmButtonText: 'Submit',
+            focusConfirm: false,
+            preConfirm: () => {
+                const email = Swal.getPopup().querySelector('#email').value;
+                const newPassword = Swal.getPopup().querySelector('#newPassword').value;
+
+                if (!email || !newPassword) {
+                    Swal.showValidationMessage('Please enter your email and new password');
+                    return false;
+                }
+
+                return { email: email, newPassword: newPassword };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/users/reset-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(result.value)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.message || 'Something went wrong');
+                        });
+                    }
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Password Reset',
+                        text: 'Your password has been reset successfully.'
+                    });
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Failed to Reset Password',
+                        text: 'Error: ' + error.message
+                    });
+                });
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

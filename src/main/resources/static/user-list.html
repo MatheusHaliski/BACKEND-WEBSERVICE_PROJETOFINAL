@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        #userList {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        #userList h2 {
+            margin-top: 0;
+        }
+        #userList ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #userList li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #userList li:hover {
+            background-color: #f1f1f1;
+        }
+        .delete-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="userList">
+    <h2>Users</h2>
+    <ul id="userListItems"></ul>
+</div>
+
+<script>
+    function fetchUsers() {
+        const authToken = localStorage.getItem('authToken'); // Obtém o token de autenticação
+
+        fetch('/users/all', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        })
+        .then(response => response.json())
+        .then(users => {
+            const userListItems = document.getElementById('userListItems');
+            userListItems.innerHTML = '';
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    ${user.name} (${user.email})
+                    <button class="delete-btn" onclick="deleteUser('${user.email}', ${user.id})">Delete</button>
+                `;
+                userListItems.appendChild(li);
+            });
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed to fetch users',
+                text: 'Error fetching user list: ' + error.message
+            });
+        });
+    }
+
+    // Função para verificar o papel do usuário a partir do token JWT
+function getUserRoleFromToken() {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) return null;
+
+    // Decodifica o token JWT para obter as informações do payload
+    const tokenPayload = JSON.parse(atob(authToken.split('.')[1]));
+    return tokenPayload.role; // Supondo que o papel do usuário está no campo 'role'
+}
+
+// Verifica se o usuário tem o papel "COMUM" antes de permitir a exclusão
+function deleteUser(userEmail, userId) {
+    const requestingUserEmail = localStorage.getItem('userEmail'); // Email do usuário autenticado
+    const authToken = localStorage.getItem('authToken'); // Token de autenticação
+    const userRole = getUserRoleFromToken(); // Obtém o papel do usuário a partir do token
+
+    // Verifica se o usuário é "COMUM"
+    if (userRole === 'COMUM') {
+        Swal.fire({
+            icon: 'error', // Ícone de negação para usuário comum
+            title: 'Operation not allowed',
+            text: 'You cannot delete accounts as a common user'
+        });
+        return; // Cancela a operação de deleção
+    }
+
+    // Verifica se o usuário está tentando deletar sua própria conta
+    if (userEmail === requestingUserEmail) {
+        Swal.fire({
+            icon: 'error',  // Ícone de erro ao tentar excluir a própria conta
+            title: 'Operation not allowed',
+            text: 'You cannot delete your own account'
+        });
+        return; // Cancela a operação de deleção
+    }
+
+    // Realiza a operação de exclusão se o usuário não for comum
+    fetch(`/users/${requestingUserEmail}/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${authToken}`
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.message!="Forbidden") {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: result.message
+            });
+            fetchUsers(); // Atualiza a lista após a exclusão
+        }
+        if (result.message=="Forbidden") {
+            Swal.fire({
+                icon: 'error',
+                title: 'You dont have enough previleges to delete',
+                text: result.message
+            });
+            fetchUsers(); // Atualiza a lista após a exclusão
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Failed to delete user',
+            text: 'Error: ' + error.message
+        });
+    });
+}
+
+    document.addEventListener('DOMContentLoaded', fetchUsers);
+</script>
+
+
+</body>
+</html>
