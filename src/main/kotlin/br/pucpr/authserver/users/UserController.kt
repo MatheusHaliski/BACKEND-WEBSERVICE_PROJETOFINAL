@@ -37,18 +37,6 @@ class UserController(
         }
     }
 
-    @GetMapping("/list")
-    @SecurityRequirement(name = "AuthServer")
-    @PreAuthorize("permitAll()")
-    fun listUsers(): ResponseEntity<List<UserResponse>> {
-        val users = service.getAllUsers()
-        return if (users.isNotEmpty()) {
-            ResponseEntity.ok(users.map { UserResponse(it) }) // Map users to UserResponse DTO
-        } else {
-            ResponseEntity.noContent().build() // No users found
-        }
-    }
-
     @GetMapping
     @SecurityRequirement(name = "AuthServer")
     @PreAuthorize("permitAll()")
@@ -88,7 +76,7 @@ class UserController(
         }
     }
 
-    @PostMapping("/{userId}/roles/{roleId}")
+    @PostMapping("/{userId}/{roleId}")
     @SecurityRequirement(name = "AuthServer")
     @PreAuthorize("permitAll()")
     fun addRoleToUser(
@@ -139,7 +127,7 @@ class UserController(
         }
     }
 
-    @GetMapping("/profile")
+    @GetMapping("/")
     @SecurityRequirement(name = "AuthServer")
     @PreAuthorize("permitAll()")
     fun getProfile(@RequestParam email: String): ResponseEntity<Any> {
@@ -151,7 +139,7 @@ class UserController(
         }
     }
 
-    @PutMapping("/updateProfile")
+    @PutMapping("/")
     @SecurityRequirement(name = "AuthServer")
     @PreAuthorize("permitAll()")
     fun updateProfile(

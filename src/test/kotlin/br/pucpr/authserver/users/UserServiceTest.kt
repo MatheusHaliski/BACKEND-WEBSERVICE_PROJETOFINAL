@@ -34,3 +34,7 @@ class UserServiceTest {
         verify(exactly = 0) { repository.save(any()) }
     }
 }
+// adicionar: log.info OK!!
+// arrumar: deletar verbos de POST e GET OK!!
+// adicionar: testes unitarios
+// adicionar: config. externa (OPCIONAL)

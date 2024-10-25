@@ -20,7 +20,7 @@ class RoleController(
     ) = RoleResponse(service.insert(role.toRole()))
         .let { ResponseEntity.status(CREATED).body(it) }
 
-    @GetMapping("/listaroles")
+    @GetMapping
     fun list() =
         service.findAll()
             .map { RoleResponse(it) }

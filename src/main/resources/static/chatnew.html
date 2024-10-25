@@ -253,7 +253,7 @@
       return;
     }
 
-    fetch(`/users/profile?email=${userEmail}`, {
+    fetch(`/users/?email=${userEmail}`, {
       headers: {
         'Authorization': `Bearer ${authToken}`
       }
@@ -294,7 +294,7 @@
       formData.append('profilePic', profilePicFile);
     }
 
-    fetch('/users/updateProfile', {
+    fetch('/users/', {
       method: 'PUT',
       body: formData,
       headers: {
@@ -373,7 +373,7 @@
 
   async function getUserProfilePic() {
     try {
-      const response = await fetch(`/users/profile?email=${userEmail}`, {
+      const response = await fetch(`/users/?email=${userEmail}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -391,7 +391,7 @@
 
   async function getRecipientProfilePic() {
     try {
-      const response = await fetch(`/users/profile?email=${currentChatUserEmail}`, {
+      const response = await fetch(`/users/?email=${currentChatUserEmail}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -411,7 +411,7 @@
     const messageFeed = document.getElementById('messageFeed');
     messageFeed.innerHTML = '';
 
-    const response = await fetch(`/mensagens/listarmt/${loggedUserEmail}/${emailDestinatario}`, {
+    const response = await fetch(`/mensagens/${loggedUserEmail}/${emailDestinatario}`, {
       headers: {
         'Authorization': `Bearer ${authToken}`
       }
@@ -451,7 +451,7 @@
 
   async function deletarMensagem(messageId) {
     try {
-      const response = await fetch(`/mensagens/deletar/${messageId}`, {
+      const response = await fetch(`/mensagens/${messageId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -485,7 +485,7 @@
       messageContent: messageContent
     };
 
-    fetch('/mensagens/criarmt', {
+    fetch('/mensagens', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

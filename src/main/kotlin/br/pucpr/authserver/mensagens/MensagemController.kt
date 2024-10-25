@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*
 class MensagemController(
 val service : ServiceMensagem,
 ){
-    @PostMapping("/criarmt")
+    @PostMapping
     fun criarMensagem(@RequestBody mensagemDto: MensagemDTO): ResponseEntity<Mensagens> {
         // Construa a nova mensagem usando os dados recebidos
         val mensagem = Mensagens(
@@ -21,7 +21,7 @@ val service : ServiceMensagem,
         return ResponseEntity.ok(novaMensagem)
     }
 
-    @GetMapping("/listarmt/{remetente}/{destinatario}")
+    @GetMapping("/{remetente}/{destinatario}")
     fun listarMensagens(@PathVariable remetente: String, @PathVariable destinatario: String): List<Mensagens> {
         // Obtém as mensagens de ambos os usuários
         val mensagensRemetenteDestinatario = service.listaEntreUsuarios(remetente, destinatario)
@@ -33,7 +33,7 @@ val service : ServiceMensagem,
         // Ordena as mensagens por ID
         return todasMensagens.sortedBy { it.id }
     }
-    @DeleteMapping("/deletar/{id}")
+    @DeleteMapping("/{id}")
     fun deletarMensagem(@PathVariable id: Long?): ResponseEntity<Void> {
         return if (service.deletarMensagem(id)) {
             ResponseEntity.noContent().build<Void>() // Retorna 204 No Content se a deleção foi bem-sucedida

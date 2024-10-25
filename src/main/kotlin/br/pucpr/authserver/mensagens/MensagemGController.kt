@@ -9,12 +9,12 @@ import org.springframework.web.bind.annotation.*
 class MensagemGController(
     val serviceg : ServiceMensagemG
 ) {
-    @PostMapping("/criarm")
+    @PostMapping
     fun criarMensagem(@RequestBody mensagem: MensagensG): ResponseEntity<MensagensG> {
         val novaMensagem = serviceg.insert(mensagem)
         return ResponseEntity.ok(novaMensagem)
     }
-    @GetMapping("/listarm")
+    @GetMapping
     fun listarMensagens(): List<MensagensG> {
         return serviceg.lista()
     }

@@ -153,7 +153,7 @@
             return;
         }
 
-        fetch(`/users/profile?email=${userEmail}`, {
+        fetch(`/users/?email=${userEmail}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${authToken}` // Adicionando o token no header
@@ -196,7 +196,7 @@
             formData.append('profilePic', profilePicFile);
         }
 
-        fetch('/users/updateProfile', {
+        fetch('/users/', {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${authToken}` // Adicionando o token no header
@@ -243,7 +243,7 @@
 
         if (messageContent) {
             const novaMensagem = { emailUser: userEmail, messageContent };
-            const response = await fetch('/mensagensG/criarm', {
+            const response = await fetch('/mensagensG', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -263,7 +263,7 @@
     }
 
     async function fetchMessages() {
-    const response = await fetch('/mensagensG/listarm', {
+    const response = await fetch('/mensagensG', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${authToken}` // Adicionando o token no header
@@ -317,7 +317,7 @@
 
     async function getUserProfilePicByEmail(emailUser) {
         try {
-            const response = await fetch(`/users/profile?email=${emailUser}`, {
+            const response = await fetch(`/users/?email=${emailUser}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}` // Adicionando o token no header
