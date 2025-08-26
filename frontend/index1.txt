@@ -1,1 +1,0 @@
-aqui inicio o componente Vite-powered React app.
